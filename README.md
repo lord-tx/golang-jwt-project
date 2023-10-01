@@ -29,7 +29,8 @@ Clone the repository:
   git clone https://github.com/your-username/your-golang-jwt-project.git
   cd your-golang-jwt-project
   go mod tidy
-  go run main.go```
+  go run main.go
+```
 
 ## Usage
 
