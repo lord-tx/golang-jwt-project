@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -39,7 +38,7 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 	msg := ""
 
 	if err != nil {
-		msg = fmt.Sprintf("email or password is incorrect")
+		msg = "email or password is incorrect"
 		check = false
 
 	}
@@ -49,12 +48,11 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		var user models.User
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
-		err := c.BindJSON(&user)
-		if err != nil {
+		var user models.User
+		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -66,9 +64,7 @@ func SignUp() gin.HandlerFunc {
 		}
 
 		emailCount, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
-		defer cancel()
 		if err != nil {
-			log.Panic(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while checking for the email"})
 			return
 		}
@@ -77,21 +73,19 @@ func SignUp() gin.HandlerFunc {
 		user.Password = &password
 
 		count, err := userCollection.CountDocuments(ctx, bson.M{"phone": user.Phone})
-		defer cancel()
 		if err != nil {
-			log.Panic(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while checking for phone number"})
 			return
-
 		}
 
 		if emailCount > 0 || count > 0 {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "this email or phone number already exists"})
+			c.JSON(http.StatusConflict, gin.H{"error": "this email or phone number already exists"})
 			return
 		}
 
-		user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		now := time.Now()
+		user.Created_at = now
+		user.Updated_at = now
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
 
@@ -102,12 +96,10 @@ func SignUp() gin.HandlerFunc {
 
 		resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
 		if insertErr != nil {
-			msg := "User item was not created"
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "User item was not created"})
 			return
 		}
 
-		defer cancel()
 		c.JSON(http.StatusOK, resultInsertionNumber)
 	}
 }
@@ -136,7 +128,7 @@ func Login() gin.HandlerFunc {
 		passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
 		defer cancel()
 
-		if passwordIsValid != true {
+		if !passwordIsValid {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -178,8 +170,11 @@ func GetUsers() gin.HandlerFunc {
 			page = 1
 		}
 
-		startIndex := (page - 1) * recordPerPage
-		startIndex, err = strconv.Atoi(c.Query("startIndex"))
+		startIndex, err := strconv.Atoi(c.Query("startIndex"))
+
+		if err != nil {
+			startIndex = (page - 1) * recordPerPage
+		}
 
 		matchStage := bson.D{{Key: "$match", Value: bson.D{{}}}}
 		groupStage := bson.D{

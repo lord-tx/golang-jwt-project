@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -101,17 +100,6 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 			return []byte(SECRET_KEY), nil
 		},
 	)
-
-	if claims, ok := token.Claims.(*SignedDetails); ok && token.Valid {
-		fmt.Println("Email: ", claims.Email)
-		fmt.Println("First Name: ", claims.First_name)
-		// Access other claims as needed
-	} else {
-		fmt.Println("Invalid token")
-		// Handle the case where the token is invalid
-	}
-
-	fmt.Println("Validate token: ", token)
 
 	if err != nil {
 		msg = err.Error()
